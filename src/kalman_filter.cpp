@@ -1,7 +1,10 @@
+#include <iostream>
 #include "kalman_filter.h"
 
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
+using namespace std;
+
 
 // Please note that the Eigen library does not initialize 
 // VectorXd or MatrixXd objects with zeros upon creation.
@@ -10,29 +13,52 @@ KalmanFilter::KalmanFilter() {}
 
 KalmanFilter::~KalmanFilter() {}
 
-void KalmanFilter::Init(VectorXd &x_in, MatrixXd &P_in, MatrixXd &F_in,
-                        MatrixXd &H_in, MatrixXd &R_in, MatrixXd &Q_in) {
+void KalmanFilter::Init(VectorXd &x_in) {
   x_ = x_in;
-  P_ = P_in;
-  F_ = F_in;
-  H_ = H_in;
-  R_ = R_in;
-  Q_ = Q_in;
+  P_ = MatrixXd(4,4);
+  P_ << 1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1000, 0,
+      0, 0, 0, 1000;
+
+  F_ = MatrixXd::Identity(4, 4);
+  Q_ = MatrixXd(4,4);
 }
 
-void KalmanFilter::Predict() {
+void KalmanFilter::Predict(double dt) {
+  double dt_2 = dt * dt;
+  double dt_3 = dt_2 * dt;
+  double dt_4 = dt_3 * dt;
+
+  // Modify the F matrix so that the time is integrated
+  F_(0, 2) = dt;
+  F_(1, 3) = dt;
+
+  // Update process noise covariance matrix using elapsed time
+  double noise_ax = 9;
+  double noise_ay = 9;
+  Q_ <<  dt_4/4*noise_ax, 0, dt_3/2*noise_ax, 0,
+          0, dt_4/4*noise_ay, 0, dt_3/2*noise_ay,
+          dt_3/2*noise_ax, 0, dt_2*noise_ax, 0,
+          0, dt_3/2*noise_ay, 0, dt_2*noise_ay;
+
   x_ = F_ * x_;
   MatrixXd Ft = F_.transpose();
   P_ = F_ * P_ * Ft + Q_;
 }
 
 void KalmanFilter::Filter(const VectorXd &y) {
-  // TODO remove function if not needed (since extKF and normal KF are different)
+  cout << "y: " << y << endl;
   MatrixXd Ht = H_.transpose();
+  cout << "Ht: " << Ht << endl;
   MatrixXd S = H_ * P_ * Ht + R_;
+  cout << "S: " << S << endl;
   MatrixXd Si = S.inverse();
+  cout << "Si: " << Si << endl;
   MatrixXd PHt = P_ * Ht;
+  cout << "PHt: " << PHt << endl;
   MatrixXd K = PHt * Si;
+  cout << "K: " << K << endl;
 
   //new estimate
   x_ = x_ + (K * y);
@@ -44,22 +70,10 @@ void KalmanFilter::Filter(const VectorXd &y) {
 void KalmanFilter::Update(const VectorXd &z) {
   VectorXd z_pred = H_ * x_;
   VectorXd y = z - z_pred;
-
-  MatrixXd Ht = H_.transpose();
-  MatrixXd S = H_ * P_ * Ht + R_;
-  MatrixXd Si = S.inverse();
-  MatrixXd PHt = P_ * Ht;
-  MatrixXd K = PHt * Si;
-
-  //new estimate
-  x_ = x_ + (K * y);
-  long x_size = x_.size();
-  MatrixXd I = MatrixXd::Identity(x_size, x_size);
-  P_ = (I - K * H_) * P_;
+  Filter(y);
 }
 
 void KalmanFilter::UpdateEKF(const VectorXd &z) {
-
   double px = x_(0);
   double py = x_(1);
   double vx = x_(2);
@@ -73,22 +87,5 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
 
   VectorXd y = z - h;
 
-  MatrixXd Hj = tools_.CalculateJacobian(x_); // TODO
-  MatrixXd Ht = Hj.transpose();
-  MatrixXd S = Hj * P_ * Ht + R_;
-  MatrixXd Si = S.inverse();
-  MatrixXd PHt = P_ * Ht;
-  MatrixXd K = PHt * Si;
-
-  //new estimate
-  x_ = x_ + (K * y);
-  long x_size = x_.size();
-  MatrixXd I = MatrixXd::Identity(x_size, x_size);
-  P_ = (I - K * H_) * P_;
-
-  // TODO
-  // Filter(y);
-
-  // TODO
-  // For lidar measurements, the error equation is y = z - H * x'. For radar measurements, the functions that map the x vector [px, py, vx, vy] to polar coordinates are non-linear. Instead of using H to calculate y = z - H * x', for radar measurements you'll have to use the equations that map from cartesian to polar coordinates: y = z - h(x').
+  Filter(y);
 }
