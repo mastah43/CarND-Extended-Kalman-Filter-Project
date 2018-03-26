@@ -80,8 +80,8 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
   double vy = x_(3);
 
   double range = sqrt(px*px + py*py);
-  double angle = atan(py/px);
-  double rangeRate = (px*vx + py*vy) / range;
+  double angle = atan2(py, px);
+  double rangeRate = (range < 0.0001) ? 0 : (px*vx + py*vy) / range;
   VectorXd h = VectorXd(3);
   h << range, angle, rangeRate;
 

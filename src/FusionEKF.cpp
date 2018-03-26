@@ -100,6 +100,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
      * Use noise_ax = 9 and noise_ay = 9 for your Q matrix.
    */
   double dt = (measurement_pack.timestamp_ - previous_timestamp_) / 1000000.;
+  previous_timestamp_ = measurement_pack.timestamp_;
 
   cout << "time passed until next measurement:" << dt << endl;
 
