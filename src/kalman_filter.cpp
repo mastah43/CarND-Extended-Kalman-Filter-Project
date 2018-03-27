@@ -49,6 +49,7 @@ void KalmanFilter::Predict(double dt) {
 
 void KalmanFilter::Filter(const VectorXd &y) {
   cout << "y: " << y << endl;
+  cout << "H: " << H_ << endl;
   MatrixXd Ht = H_.transpose();
   cout << "Ht: " << Ht << endl;
   MatrixXd S = H_ * P_ * Ht + R_;
@@ -80,10 +81,13 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
   double vy = x_(3);
 
   double range = sqrt(px*px + py*py);
-  double angle = atan2(py, px);
+  double angleRad = atan2(py, px);
+  while (angleRad > M_PI) angleRad -= M_PI*2;
+  while (angleRad < -M_PI) angleRad += M_PI*2;
+
   double rangeRate = (range < 0.0001) ? 0 : (px*vx + py*vy) / range;
   VectorXd h = VectorXd(3);
-  h << range, angle, rangeRate;
+  h << range, angleRad, rangeRate;
 
   VectorXd y = z - h;
 

@@ -53,18 +53,23 @@ MatrixXd Tools::CalculateJacobian(const VectorXd& x_state) {
     double vx = x_state(2);
     double vy = x_state(3);
 
-    //check division by zero
-    if ((px == 0) && (py == 0)) {
-        cerr << "position 0,0 faced";
+    double square_sum = px*px + py*py;
+
+    // check division by zero
+    if (square_sum < 0.0001) {
+        cerr << "position near 0,0 faced - skiping computation of jacobian";
         return Hj;
     }
 
-    double square_sum = px*px + py*py;
     double dist = sqrt(square_sum);
     Hj(0,0) = px/dist;
     Hj(0,1) = py/dist;
+    Hj(0,2) = 0;
+    Hj(0,3) = 0;
     Hj(1,0) = -py/square_sum;
     Hj(1,1) = px/square_sum;
+    Hj(1,2) = 0;
+    Hj(1,3) = 0;
     Hj(2,0) = py*(vx*py - vy*px)/pow(square_sum, 1.5);
     Hj(2,1) = px*(vy*px - vx*py)/pow(square_sum, 1.5);
     Hj(2,2) = px/dist;

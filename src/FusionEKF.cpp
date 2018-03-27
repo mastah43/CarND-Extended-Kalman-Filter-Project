@@ -62,13 +62,22 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       /**
       Convert radar from polar to cartesian coordinates and initialize state.
       */
-      float range = measurement_pack.raw_measurements_(0);
-      float angle    = measurement_pack.raw_measurements_(1);
-      float rangeRate = measurement_pack.raw_measurements_(2);
-      x_in(0) = range * cos(angle);
-      x_in(1) = range * sin(angle);
-      x_in(2) = rangeRate * cos(angle);
-      x_in(3) = rangeRate * sin(angle);
+      double range = measurement_pack.raw_measurements_(0);
+      double angle    = measurement_pack.raw_measurements_(1);
+      double rangeRate = measurement_pack.raw_measurements_(2);
+      double x = range * cos(angle);
+      double y = range * sin(angle);
+      double vx = rangeRate * cos(angle);
+      double vy = rangeRate * sin(angle);
+
+      // TODO why is having position 0 bad?;
+      x = (x < 0.0001) ? 0.0001 : x;
+      y = (y < 0.0001) ? 0.0001 : y;
+
+      x_in(0) = x;
+      x_in(1) = y;
+      x_in(2) = vx;
+      x_in(3) = vy;
     }
     else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
       /**
