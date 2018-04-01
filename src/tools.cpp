@@ -19,6 +19,10 @@ VectorXd Tools::CalculateRMSE(const vector<VectorXd> &estimations,
     // check the validity of the following inputs:
     //  * the estimation vector size should not be zero
     //  * the estimation vector size should equal ground truth vector size
+    if (estimations.size() == 0) {
+        cerr << "Estimations are empty" << endl;
+        return rmse;
+    }
     if(estimations.size() != ground_truth.size()
        || estimations.size() == 0){
         cerr << "Invalid estimation or ground_truth data" << endl;
@@ -26,13 +30,10 @@ VectorXd Tools::CalculateRMSE(const vector<VectorXd> &estimations,
     }
 
     //accumulate squared residuals
-    for(unsigned int i=0; i < estimations.size(); ++i){
-        VectorXd estimation = estimations[i];
-        VectorXd groundTruthCur = ground_truth[i];
-        for (int j=0; j<4; j++) {
-            double deviation = estimation(j) - groundTruthCur(j);
-            rmse(j) += deviation*deviation;
-        }
+    for(unsigned int i=0; i < estimations.size(); ++i) {
+        VectorXd residual = estimations[i] - ground_truth[i];
+        residual = residual.array()*residual.array();
+        rmse += residual;
     }
 
     //calculate the mean
@@ -40,6 +41,16 @@ VectorXd Tools::CalculateRMSE(const vector<VectorXd> &estimations,
 
     //calculate the squared root
     rmse = rmse.array().sqrt();
+
+    double error_px = rmse(0);
+    double error_py = rmse(1);
+    double error_vx = rmse(2);
+    double error_vy = rmse(3);
+
+    if ((error_px > 0.11) || (error_py > 0.11) || (error_vx > 0.52) || (error_vy > 0.52)) {
+        cerr << "rmse too high: x=" << error_px << "; y=" << error_py
+             << "; vx=" << error_vx << "; vy=" << error_vy << endl;
+    }
 
     return rmse;
 
@@ -53,26 +64,28 @@ MatrixXd Tools::CalculateJacobian(const VectorXd& x_state) {
     double vx = x_state(2);
     double vy = x_state(3);
 
-    double square_sum = px*px + py*py;
+    double c1 = px*px + py*py;
 
     // check division by zero
-    if (square_sum < 0.0001) {
-        cerr << "position near 0,0 faced - skiping computation of jacobian";
-        return Hj;
+    if (fabs(c1) < 0.0001) {
+        cerr << "distance near 0 faced - using eps";
+        c1 = 0.0001;
     }
 
-    double dist = sqrt(square_sum);
-    Hj(0,0) = px/dist;
-    Hj(0,1) = py/dist;
+    double c2 = sqrt(c1);
+    double c3 = c1*c2;
+
+    Hj(0,0) = px/c2;
+    Hj(0,1) = py/c2;
     Hj(0,2) = 0;
     Hj(0,3) = 0;
-    Hj(1,0) = -py/square_sum;
-    Hj(1,1) = px/square_sum;
+    Hj(1,0) = -py/c1;
+    Hj(1,1) = px/c1;
     Hj(1,2) = 0;
     Hj(1,3) = 0;
-    Hj(2,0) = py*(vx*py - vy*px)/pow(square_sum, 1.5);
-    Hj(2,1) = px*(vy*px - vx*py)/pow(square_sum, 1.5);
-    Hj(2,2) = px/dist;
-    Hj(2,3) = py/dist;
+    Hj(2,0) = py*(vx*py - vy*px)/c3;
+    Hj(2,1) = px*(vy*px - vx*py)/c3;
+    Hj(2,2) = px/c2;
+    Hj(2,3) = py/c2;
     return Hj;
 }

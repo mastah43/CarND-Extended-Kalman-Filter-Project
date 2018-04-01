@@ -22,6 +22,10 @@ void KalmanFilter::Init(VectorXd &x_in) {
       0, 0, 0, 1000;
 
   F_ = MatrixXd::Identity(4, 4);
+  F_ << 1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1;
   Q_ = MatrixXd(4,4);
 }
 
@@ -82,14 +86,15 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
 
   double range = sqrt(px*px + py*py);
   double angleRad = atan2(py, px);
-  while (angleRad > M_PI) angleRad -= M_PI*2;
-  while (angleRad < -M_PI) angleRad += M_PI*2;
-
   double rangeRate = (range < 0.0001) ? 0 : (px*vx + py*vy) / range;
   VectorXd h = VectorXd(3);
   h << range, angleRad, rangeRate;
 
   VectorXd y = z - h;
+
+  while (y(1) > M_PI) y(1) -= M_PI*2;
+  while (y(1) < -M_PI) y(1) += M_PI*2;
+
 
   Filter(y);
 }

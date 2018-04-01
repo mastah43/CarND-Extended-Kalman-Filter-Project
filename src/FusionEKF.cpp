@@ -20,7 +20,6 @@ FusionEKF::FusionEKF() {
   R_laser_ = MatrixXd(2, 2);
   R_radar_ = MatrixXd(3, 3);
   H_laser_ = MatrixXd(2, 4);
-  Hj_ = MatrixXd(3, 4);
 
   //measurement covariance matrix - laser
   R_laser_ << 0.0225, 0,
@@ -34,8 +33,6 @@ FusionEKF::FusionEKF() {
   // laser measurement transformation
   H_laser_ << 1, 0, 0, 0,
               0, 1, 0, 0;
-
-
 }
 
 /**
@@ -59,9 +56,8 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     VectorXd x_in(4);
 
     if (measurement_pack.sensor_type_ == MeasurementPackage::RADAR) {
-      /**
-      Convert radar from polar to cartesian coordinates and initialize state.
-      */
+      // Initialization with radar can be done for position and velocity.
+      // Convert radar from polar to cartesian coordinates and initialize state.
       double range = measurement_pack.raw_measurements_(0);
       double angle    = measurement_pack.raw_measurements_(1);
       double rangeRate = measurement_pack.raw_measurements_(2);
@@ -69,24 +65,20 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
       double y = range * sin(angle);
       double vx = rangeRate * cos(angle);
       double vy = rangeRate * sin(angle);
-
-      // TODO why is having position 0 bad?;
-      x = (x < 0.0001) ? 0.0001 : x;
-      y = (y < 0.0001) ? 0.0001 : y;
-
-      x_in(0) = x;
-      x_in(1) = y;
-      x_in(2) = vx;
-      x_in(3) = vy;
+      x_in << x, y, vx, vy;
     }
     else if (measurement_pack.sensor_type_ == MeasurementPackage::LASER) {
-      /**
-      Initialize state.
-      */
-      x_in(0) = measurement_pack.raw_measurements_(0);
-      x_in(1) = measurement_pack.raw_measurements_(1);
-      x_in(2) = 1;
-      x_in(3) = 1;
+      // Initialization with lidar can only be done for position
+      double x = measurement_pack.raw_measurements_(0);
+      double y = measurement_pack.raw_measurements_(1);
+      x_in << x, y, 0, 0;
+    }
+
+    if (fabs(x_in(0)) < 0.0001) {
+      x_in(0) = 0.0001;
+    }
+    if (fabs(x_in(1)) < 0.0001) {
+      x_in(1) = 0.0001;
     }
 
     ekf_.Init(x_in);
@@ -108,10 +100,10 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
      * Update the process noise covariance matrix.
      * Use noise_ax = 9 and noise_ay = 9 for your Q matrix.
    */
+  cout << "time:" << (measurement_pack.timestamp_/1000000.) << endl;
   double dt = (measurement_pack.timestamp_ - previous_timestamp_) / 1000000.;
   previous_timestamp_ = measurement_pack.timestamp_;
 
-  cout << "time passed until next measurement:" << dt << endl;
 
   ekf_.Predict(dt);
 
@@ -129,7 +121,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     cout << "radar measurement" << endl;
     ekf_.H_ = tools.CalculateJacobian(ekf_.x_);
     ekf_.R_ = R_radar_;
-    ekf_.UpdateEKF(measurement_pack.raw_measurements_); // TODO produced nan for x and P upon third measurement in radar,lidar,radar
+    ekf_.UpdateEKF(measurement_pack.raw_measurements_);
   } else {
     // Laser updates
     cout << "lidar measurement" << endl;
