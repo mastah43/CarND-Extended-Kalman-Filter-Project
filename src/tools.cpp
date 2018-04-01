@@ -42,6 +42,7 @@ VectorXd Tools::CalculateRMSE(const vector<VectorXd> &estimations,
     //calculate the squared root
     rmse = rmse.array().sqrt();
 
+    /*
     double error_px = rmse(0);
     double error_py = rmse(1);
     double error_vx = rmse(2);
@@ -51,6 +52,7 @@ VectorXd Tools::CalculateRMSE(const vector<VectorXd> &estimations,
         cerr << "rmse too high: x=" << error_px << "; y=" << error_py
              << "; vx=" << error_vx << "; vy=" << error_vy << endl;
     }
+    */
 
     return rmse;
 

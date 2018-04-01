@@ -52,18 +52,18 @@ void KalmanFilter::Predict(double dt) {
 }
 
 void KalmanFilter::Filter(const VectorXd &y) {
-  cout << "y: " << y << endl;
-  cout << "H: " << H_ << endl;
+  //cout << "y: " << y << endl;
+  //cout << "H: " << H_ << endl;
   MatrixXd Ht = H_.transpose();
-  cout << "Ht: " << Ht << endl;
+  //cout << "Ht: " << Ht << endl;
   MatrixXd S = H_ * P_ * Ht + R_;
-  cout << "S: " << S << endl;
+  //cout << "S: " << S << endl;
   MatrixXd Si = S.inverse();
-  cout << "Si: " << Si << endl;
+  //cout << "Si: " << Si << endl;
   MatrixXd PHt = P_ * Ht;
-  cout << "PHt: " << PHt << endl;
+  //cout << "PHt: " << PHt << endl;
   MatrixXd K = PHt * Si;
-  cout << "K: " << K << endl;
+  //cout << "K: " << K << endl;
 
   //new estimate
   x_ = x_ + (K * y);
